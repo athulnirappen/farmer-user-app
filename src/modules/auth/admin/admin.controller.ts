@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { loginAdmin, registerAdmin } from './auth.service.js';
+import { loginAdmin, registerAdmin } from './admin.service.js';
 
 export const registerAdminController = async (
   req: Request,

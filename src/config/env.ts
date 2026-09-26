@@ -9,6 +9,26 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL cannot be empty'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('15m'),
+  REFRESH_TOKEN_EXPIRES_IN_DAYS: z.string().default('30').transform(Number).refine(
+    (value) => Number.isInteger(value) && value > 0,
+    'REFRESH_TOKEN_EXPIRES_IN_DAYS must be a positive integer'
+  ),
+  OTP_EXPIRES_IN_MINUTES: z.string().default('5').transform(Number).refine(
+    (value) => Number.isInteger(value) && value > 0,
+    'OTP_EXPIRES_IN_MINUTES must be a positive integer'
+  ),
+  OTP_MAX_ATTEMPTS: z.string().default('5').transform(Number).refine(
+    (value) => Number.isInteger(value) && value > 0,
+    'OTP_MAX_ATTEMPTS must be a positive integer'
+  ),
+  OTP_RESEND_COOLDOWN_SECONDS: z.string().default('60').transform(Number).refine(
+    (value) => Number.isInteger(value) && value > 0,
+    'OTP_RESEND_COOLDOWN_SECONDS must be a positive integer'
+  ),
+  OTP_MAX_REQUESTS_PER_HOUR: z.string().default('5').transform(Number).refine(
+    (value) => Number.isInteger(value) && value > 0,
+    'OTP_MAX_REQUESTS_PER_HOUR must be a positive integer'
+  ),
   RATE_LIMIT_MAX: z.string().default('100').transform((val) => parseInt(val, 10)),
   RATE_LIMIT_WINDOW_MS: z.string().default('900000').transform((val) => parseInt(val, 10)), // 15 mins default
 });

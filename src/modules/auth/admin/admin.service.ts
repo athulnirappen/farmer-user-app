@@ -1,9 +1,10 @@
 import { Prisma } from '@prisma/client';
-import { AppError } from '../../shared/errors/app-error.js';
-import { generateToken } from '../../shared/utils/jwt.js';
-import { comparePassword, hashPassword } from '../../shared/utils/password.js';
-import { AdminLoginInput, AdminRegisterInput } from './auth.schemas.js';
-import { createAdmin, findUserByEmail } from './auth.repository.js';
+import { AppError } from '../../../shared/errors/app-error.js';
+import { generateToken } from '../../../shared/utils/jwt.js';
+import { comparePassword, hashPassword } from '../../../shared/utils/password.js';
+import { createRefreshTokenMaterial } from '../auth.tokens.js';
+import { createAdmin, findUserByEmail, storeRefreshToken } from '../auth.repository.js';
+import { AdminLoginInput, AdminRegisterInput } from './admin.schemas.js';
 
 const toAuthResponse = (user: {
   id: string;
@@ -20,6 +21,23 @@ const toAuthResponse = (user: {
   accessToken: generateToken({ sub: user.id, role: user.role }),
 });
 
+const toLoginResponse = async (user: {
+  id: string;
+  name: string;
+  email: string;
+  role: 'ADMIN' | 'USER';
+}) => {
+  const { refreshToken, refreshTokenHash, refreshTokenExpiresAt } = createRefreshTokenMaterial();
+
+  await storeRefreshToken({
+    userId: user.id,
+    tokenHash: refreshTokenHash,
+    expiresAt: refreshTokenExpiresAt,
+  });
+
+  return { ...toAuthResponse(user), refreshToken };
+};
+
 export const registerAdmin = async (input: AdminRegisterInput) => {
   const existingUser = await findUserByEmail(input.email);
 
@@ -34,7 +52,11 @@ export const registerAdmin = async (input: AdminRegisterInput) => {
       passwordHash: await hashPassword(input.password),
     });
 
-    return toAuthResponse(user);
+    if (!user.name || !user.email) {
+      throw new AppError('Invalid admin account', 500);
+    }
+
+    return toAuthResponse({ ...user, name: user.name, email: user.email });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       throw new AppError('Email is already registered', 409);
@@ -46,7 +68,14 @@ export const registerAdmin = async (input: AdminRegisterInput) => {
 export const loginAdmin = async (input: AdminLoginInput) => {
   const user = await findUserByEmail(input.email);
 
-  if (!user || user.role !== 'ADMIN' || !user.isActive) {
+  if (
+    !user ||
+    user.role !== 'ADMIN' ||
+    !user.isActive ||
+    !user.name ||
+    !user.email ||
+    !user.passwordHash
+  ) {
     throw new AppError('Invalid admin credentials', 401);
   }
 
@@ -56,5 +85,5 @@ export const loginAdmin = async (input: AdminLoginInput) => {
     throw new AppError('Invalid admin credentials', 401);
   }
 
-  return toAuthResponse(user);
+  return toLoginResponse({ ...user, name: user.name, email: user.email });
 };

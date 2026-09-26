@@ -1,14 +1,10 @@
 import { Router } from 'express';
-import { validate } from '../../middleware/validate.middleware.js';
-import {
-  loginAdminController,
-  registerAdminController,
-} from './auth.controller.js';
-import { adminLoginSchema, adminRegisterSchema } from './auth.schemas.js';
+import adminAuthRouter from './admin/admin.routes.js';
+import userAuthRouter from './user/user.routes.js';
 
 const authRouter = Router();
 
-authRouter.post('/admin/register', validate(adminRegisterSchema), registerAdminController);
-authRouter.post('/admin/login', validate(adminLoginSchema), loginAdminController);
+authRouter.use('/admin', adminAuthRouter);
+authRouter.use('/user', userAuthRouter);
 
 export default authRouter;
